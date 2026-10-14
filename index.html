@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeph's Budget — Envelope Budget</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1E2A3A">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zeph's Budget">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FAF6EC;
+    --paper-line: #E2D9C3;
+    --panel: #FFFFFF;
+    --ink: #1E2A3A;
+    --ink-soft: #5B6674;
+    --ink-faint: #8B93A0;
+    --positive: #2F5C3B;
+    --positive-bg: #E7EFE6;
+    --negative: #8C3A2B;
+    --negative-bg: #F5E6DF;
+    --gold: #96702A;
+    --gold-bg: #F1E6D2;
+    --rule: #D8CEB6;
+    --focus: #2F5C3B;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height: 100%; }
+  body{
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Source Serif 4', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num{ font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+  button, input, select{ font-family: inherit; }
+  ::selection{ background: var(--gold-bg); }
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .app{
+    display: grid;
+    grid-template-columns: 272px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    background: var(--ink);
+    color: #EFE9DA;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .brand{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .brand .mark{
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+  .brand .sub{
+    font-size: 12px;
+    color: #A9AEB8;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .rta-block{
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    padding: 16px;
+  }
+  .rta-label{
+    font-size: 12.5px;
+    color: #B7BCC6;
+    margin-bottom: 6px;
+  }
+  .rta-amount{
+    font-size: 26px;
+    font-weight: 600;
+  }
+  .rta-amount.zero{ color: #C9CDD5; }
+  .rta-amount.pos{ color: #9BC9A6; }
+  .rta-amount.neg{ color: #E3A08F; }
+  .rta-hint{
+    font-size: 11.5px;
+    color: #8B93A0;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .nav{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav button{
+    all: unset;
+    cursor: pointer;
+    padding: 9px 10px;
+    border-radius: 3px;
+    font-size: 15px;
+    color: #D6D2C4;
+  }
+  .nav button:hover{ background: rgba(255,255,255,0.06); }
+  .nav button.active{
+    background: rgba(255,255,255,0.1);
+    color: #FFFFFF;
+    font-weight: 600;
+  }
+
+  .accounts-section{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .accounts-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .accounts-header h2{
+    font-size: 12.5px;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    color: #A9AEB8;
+    margin: 0;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .icon-btn{
+    all: unset;
+    cursor: pointer;
+    color: #A9AEB8;
+    font-size: 17px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .icon-btn:hover{ background: rgba(255,255,255,0.08); color: #fff; }
+
+  .account-list{
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow-y: auto;
+  }
+  .account-row{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 14px;
+    cursor: default;
+  }
+  .account-row .name{ color: #E4E0D3; }
+  .account-row .bal{ font-size: 13px; }
+  .account-row .bal.neg{ color: #E3A08F; }
+  .account-row .bal.pos{ color: #C9CDD5; }
+  .account-row .del{
+    all: unset;
+    cursor: pointer;
+    color: #7A8290;
+    font-size: 13px;
+    margin-left: 8px;
+    visibility: hidden;
+  }
+  .account-row:hover .del{ visibility: visible; }
+  .account-row .del:hover{ color: #E3A08F; }
+
+  .total-balance{
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    margin-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 14px;
+    color: #EFE9DA;
+    font-weight: 600;
+  }
+
+  .data-actions{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+  }
+  .data-actions button{
+    all: unset;
+    cursor: pointer;
+    color: #B7BCC6;
+    padding: 6px 2px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .data-actions button:hover{ color: #fff; }
+  .data-actions .save-note{
+    color: #7A8290;
+    font-size: 11px;
+    padding-top: 4px;
+  }
+
+  /* ---------- Main ---------- */
+  .main{
+    padding: 34px 44px 60px;
+    max-width: 1100px;
+  }
+  .page-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 22px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 14px;
+  }
+  .page-header h1{
+    font-size: 26px;
+    margin: 0;
+    font-weight: 600;
+  }
+  .month-nav{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .month-nav button{
+    all: unset;
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--ink-soft);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .month-nav button:hover{ background: var(--paper-line); }
+  .month-nav .month-label{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  /* Budget table */
+  .group{ margin-bottom: 22px; }
+  .group-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 2px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .group-header h3{
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .group-header .add-cat{
+    all: unset;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .group-header .add-cat:hover{ color: var(--ink); text-decoration: underline; }
+  .group-header .del-group{
+    all: unset;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-left: 10px;
+  }
+  .group-header .del-group:hover{ color: var(--negative); }
+
+  table.budget-table{
+    width: 100%;
+    border-collapse: collapse;
+  }
+  table.budget-table th{
+    text-align: right;
+    font-size: 11.5px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink-faint);
+    font-weight: 500;
+    padding: 8px 6px 4px;
+  }
+  table.budget-table th:first-child{ text-align: left; }
+  table.budget-table td{
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--paper-line);
+    font-size: 14.5px;
+    vertical-align: middle;
+  }
+  table.budget-table td:not(:first-child){ text-align: right; }
+  .cat-name-cell{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .cat-name-cell .del-cat{
+    all: unset;
+    cursor: pointer;
+    color: var(--ink-faint);
+    font-size: 12px;
+    visibility: hidden;
+  }
+  table.budget-table tr:hover .del-cat{ visibility: visible; }
+  .cat-name-cell .del-cat:hover{ color: var(--negative); }
+
+  .budget-input{
+    width: 90px;
+    text-align: right;
+    border: 1px solid var(--paper-line);
+    background: var(--panel);
+    border-radius: 2px;
+    padding: 5px 7px;
+    font-size: 14px;
+  }
+  .budget-input:focus{ border-color: var(--ink-soft); }
+
+  .avail{
+    padding: 2px 8px;
+    border-radius: 2px;
+    display: inline-block;
+    min-width: 70px;
+  }
+  .avail.pos{ background: var(--positive-bg); color: var(--positive); }
+  .avail.neg{ background: var(--negative-bg); color: var(--negative); }
+  .avail.zero{ color: var(--ink-faint); background: transparent; }
+
+  .group-footer-row td{ font-weight: 600; border-bottom: none; padding-top: 10px; }
+
+  .add-group-row{ margin-top: 6px; }
+  .add-group-row button{
+    all: unset;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .add-group-row button:hover{ color: var(--ink); text-decoration: underline; }
+
+  /* Transactions */
+  .tx-form{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 8px;
+    margin-bottom: 18px;
+    align-items: end;
+  }
+  .field{ display: flex; flex-direction: column; gap: 4px; }
+  .field > label, .field > .cap{
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink-faint);
+  }
+
+  /* Debit / Credit segmented toggle */
+  .seg{
+    display: flex;
+    position: relative;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .seg input{
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .seg label{
+    flex: 1;
+    text-align: center;
+    padding: 7px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    user-select: none;
+  }
+  .seg input:checked + label{ background: var(--ink); color: #EFE9DA; }
+  .seg input:focus-visible + label{ outline: 2px solid var(--focus); outline-offset: -2px; }
+
+  .tx-scroll{ overflow-x: auto; }
+  .row-select{
+    border: 1px solid var(--paper-line);
+    background: var(--panel);
+    border-radius: 2px;
+    padding: 4px 6px;
+    font-size: 13.5px;
+    color: var(--ink);
+    max-width: 170px;
+  }
+  .field input, .field select{
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    padding: 7px 8px;
+    border-radius: 2px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .tx-form .submit-btn{
+    background: var(--ink);
+    color: #EFE9DA;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    height: 34px;
+  }
+  .tx-form .submit-btn:hover{ background: #2C3B50; }
+
+  table.tx-table{ width: 100%; border-collapse: collapse; }
+  table.tx-table th{
+    text-align: left;
+    font-size: 11.5px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink-faint);
+    font-weight: 500;
+    padding: 6px;
+    border-bottom: 2px solid var(--ink);
+  }
+  table.tx-table th.num-col, table.tx-table td.num-col{ text-align: right; }
+  table.tx-table td{
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--paper-line);
+    font-size: 14px;
+  }
+  table.tx-table tr:hover{ background: rgba(0,0,0,0.02); }
+  .amt-pos{ color: var(--positive); }
+  .amt-neg{ color: var(--ink); }
+  .tx-del{
+    all: unset;
+    cursor: pointer;
+    color: var(--ink-faint);
+    font-size: 12.5px;
+  }
+  .tx-del:hover{ color: var(--negative); }
+  .cleared-check{ cursor: pointer; }
+
+  .empty-state{
+    padding: 40px 10px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 14.5px;
+    border: 1px dashed var(--rule);
+    border-radius: 3px;
+  }
+
+  .toast{
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    background: var(--ink);
+    color: #EFE9DA;
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-size: 13.5px;
+    font-family: 'IBM Plex Mono', monospace;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  .toast.show{ opacity: 1; transform: translateY(0); }
+
+  #import-file{ display: none; }
+
+  @media (max-width: 820px){
+    .app{ grid-template-columns: 1fr; }
+    .sidebar{ flex-direction: column; }
+    .main{ padding: 24px 18px 50px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">Zeph's Budget</span>
+      <span class="sub">envelope budget</span>
+    </div>
+
+    <div class="rta-block">
+      <div class="rta-label">Ready to assign</div>
+      <div class="rta-amount num" id="rta-amount">$0.00</div>
+      <div class="rta-hint">Income not yet given a job. Assign it below in the budget.</div>
+    </div>
+
+    <nav class="nav">
+      <button data-view="budget" class="active">Budget</button>
+      <button data-view="transactions">Transactions</button>
+    </nav>
+
+    <div class="accounts-section">
+      <div class="accounts-header">
+        <h2>Accounts</h2>
+        <button class="icon-btn" id="add-account-btn" title="Add account" aria-label="Add account">+</button>
+      </div>
+      <div class="account-list" id="account-list"></div>
+      <div class="total-balance">
+        <span>Total balance</span>
+        <span class="num" id="total-balance">$0.00</span>
+      </div>
+    </div>
+
+    <div class="data-actions">
+      <button id="export-btn">Export data (.json)</button>
+      <button id="import-btn">Import data (.json)</button>
+      <input type="file" id="import-file" accept="application/json">
+      <button id="reset-btn">Clear all data</button>
+      <div class="save-note" id="save-note">Saved to this browser</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- BUDGET VIEW -->
+    <section id="view-budget">
+      <div class="page-header">
+        <h1>Budget</h1>
+        <div class="month-nav">
+          <button id="prev-month" aria-label="Previous month">&#8249;</button>
+          <span class="month-label num" id="month-label"></span>
+          <button id="next-month" aria-label="Next month">&#8250;</button>
+        </div>
+      </div>
+      <div id="groups-container"></div>
+      <div class="add-group-row">
+        <button id="add-group-btn">+ Add category group</button>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS VIEW -->
+    <section id="view-transactions" style="display:none;">
+      <div class="page-header">
+        <h1>Transactions</h1>
+      </div>
+
+      <form class="tx-form" id="tx-form">
+        <div class="field">
+          <label for="tx-date">Date</label>
+          <input type="date" id="tx-date" required>
+        </div>
+        <div class="field">
+          <label for="tx-payee">Payee</label>
+          <input type="text" id="tx-payee" placeholder="Who was this to/from?" required>
+        </div>
+        <div class="field">
+          <span class="cap" id="tx-type-cap">Type</span>
+          <div class="seg" role="radiogroup" aria-labelledby="tx-type-cap">
+            <input type="radio" name="tx-type" id="tx-type-debit" value="debit" checked>
+            <label for="tx-type-debit" title="Money out: subtracts from the account and the category">Debit &minus;</label>
+            <input type="radio" name="tx-type" id="tx-type-credit" value="credit">
+            <label for="tx-type-credit" title="Money in: adds to the account and the category">Credit +</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tx-amount">Amount</label>
+          <input type="number" id="tx-amount" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="tx-account">Account</label>
+          <select id="tx-account" required></select>
+        </div>
+        <div class="field">
+          <label for="tx-category">Category</label>
+          <select id="tx-category" required></select>
+        </div>
+        <div class="field">
+          <label for="tx-cleared">Cleared</label>
+          <input type="checkbox" id="tx-cleared" style="width:18px;height:18px;">
+        </div>
+        <button type="submit" class="submit-btn">Add transaction</button>
+      </form>
+
+      <div id="tx-table-container"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "ledger_budget_data_v1";
+  var INCOME_CAT_ID = "income";
+
+  // ---------- Default data ----------
+  function defaultData(){
+    var now = new Date();
+    return {
+      accounts: [
+        { id: uid(), name: "Checking", balance: 0 },
+        { id: uid(), name: "Savings", balance: 0 }
+      ],
+      categoryGroups: [
+        { id: uid(), name: "Immediate Obligations", categories: [
+          { id: uid(), name: "Rent / Mortgage" },
+          { id: uid(), name: "Electric" },
+          { id: uid(), name: "Internet" }
+        ]},
+        { id: uid(), name: "True Expenses", categories: [
+          { id: uid(), name: "Groceries" },
+          { id: uid(), name: "Car Maintenance" }
+        ]},
+        { id: uid(), name: "Quality of Life", categories: [
+          { id: uid(), name: "Dining Out" },
+          { id: uid(), name: "Subscriptions" }
+        ]}
+      ],
+      budgets: {},
+      transactions: [],
+      selectedMonth: monthKey(now)
+    };
+  }
+
+  function uid(){
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  }
+
+  function monthKey(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+  }
+
+  // Today's date in the device's own time zone (toISOString() uses UTC and can be a day off).
+  function todayStr(){
+    var d = new Date();
+    return monthKey(d) + "-" + String(d.getDate()).padStart(2,"0");
+  }
+
+  function monthLabel(key){
+    var parts = key.split("-");
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+
+  function addMonths(key, n){
+    var parts = key.split("-");
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1 + n, 1);
+    return monthKey(d);
+  }
+
+  function fmt(cents){
+    var v = Math.round(cents * 100) / 100;
+    var neg = v < 0;
+    var abs = Math.abs(v).toFixed(2);
+    return (neg ? "-$" : "$") + abs;
+  }
+
+  // ---------- State ----------
+  var state = load();
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultData();
+      var parsed = JSON.parse(raw);
+      if(!parsed.selectedMonth) parsed.selectedMonth = monthKey(new Date());
+      return parsed;
+    }catch(e){
+      console.error("Failed to load data", e);
+      return defaultData();
+    }
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      flashSaved();
+    }catch(e){
+      console.error("Failed to save data", e);
+      showToast("Could not save — storage may be full");
+    }
+  }
+
+  var saveNoteTimer = null;
+  function flashSaved(){
+    var el = document.getElementById("save-note");
+    el.textContent = "Saved just now";
+    clearTimeout(saveNoteTimer);
+    saveNoteTimer = setTimeout(function(){
+      el.textContent = "Saved to this browser";
+    }, 1500);
+  }
+
+  function showToast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+  }
+
+  // ---------- Derived calculations ----------
+
+  // All categories flat, with group ref
+  function allCategories(){
+    var out = [];
+    state.categoryGroups.forEach(function(g){
+      g.categories.forEach(function(c){ out.push({ id: c.id, name: c.name, groupId: g.id, groupName: g.name }); });
+    });
+    return out;
+  }
+
+  function allMonthsWithData(){
+    var months = {};
+    Object.keys(state.budgets).forEach(function(m){ months[m] = true; });
+    state.transactions.forEach(function(t){ months[t.date.slice(0,7)] = true; });
+    months[state.selectedMonth] = true;
+    return Object.keys(months).sort();
+  }
+
+  // Compute per-category available balances for every month up to and including target, via rollover.
+  function computeCategoryStats(targetMonth){
+    var months = allMonthsWithData().filter(function(m){ return m <= targetMonth; });
+    var cats = allCategories();
+    var running = {};
+    cats.forEach(function(c){ running[c.id] = 0; });
+
+    var statsForTarget = {};
+
+    months.forEach(function(m){
+      var budgetedThisMonth = (state.budgets[m]) || {};
+      var activityThisMonth = {};
+      cats.forEach(function(c){ activityThisMonth[c.id] = 0; });
+
+      state.transactions.forEach(function(t){
+        if(t.date.slice(0,7) === m && t.categoryId !== INCOME_CAT_ID && activityThisMonth.hasOwnProperty(t.categoryId)){
+          activityThisMonth[t.categoryId] += t.amount;
+        }
+      });
+
+      cats.forEach(function(c){
+        var budgeted = budgetedThisMonth[c.id] || 0;
+        var activity = activityThisMonth[c.id] || 0;
+        running[c.id] = running[c.id] + budgeted + activity;
+        if(m === targetMonth){
+          statsForTarget[c.id] = {
+            budgeted: budgeted,
+            activity: activity,
+            available: running[c.id]
+          };
+        }
+      });
+    });
+
+    // Ensure target month present even if no prior data
+    cats.forEach(function(c){
+      if(!statsForTarget[c.id]){
+        var budgeted = (state.budgets[targetMonth] && state.budgets[targetMonth][c.id]) || 0;
+        statsForTarget[c.id] = { budgeted: budgeted, activity: 0, available: budgeted };
+      }
+    });
+
+    return statsForTarget;
+  }
+
+  function totalIncomeAllTime(){
+    var sum = 0;
+    state.transactions.forEach(function(t){
+      if(t.categoryId === INCOME_CAT_ID) sum += t.amount;
+    });
+    return sum;
+  }
+
+  function totalBudgetedAllTime(){
+    var sum = 0;
+    Object.keys(state.budgets).forEach(function(m){
+      var byCat = state.budgets[m];
+      Object.keys(byCat).forEach(function(catId){ sum += byCat[catId] || 0; });
+    });
+    return sum;
+  }
+
+  function readyToAssign(){
+    return totalIncomeAllTime() - totalBudgetedAllTime();
+  }
+
+  function accountBalance(accountId){
+    var acct = state.accounts.find(function(a){ return a.id === accountId; });
+    var starting = acct ? (acct.startingBalance || 0) : 0;
+    var sum = starting;
+    state.transactions.forEach(function(t){
+      if(t.accountId === accountId) sum += t.amount;
+    });
+    return sum;
+  }
+
+  // ---------- Rendering ----------
+
+  var currentView = "budget";
+
+  function renderAll(){
+    renderSidebarAccounts();
+    renderRTA();
+    if(currentView === "budget"){
+      renderBudgetView();
+    } else {
+      renderTransactionsView();
+    }
+  }
+
+  function renderRTA(){
+    var rta = readyToAssign();
+    var el = document.getElementById("rta-amount");
+    el.textContent = fmt(rta);
+    el.classList.remove("pos","neg","zero");
+    if(rta > 0.004) el.classList.add("pos");
+    else if(rta < -0.004) el.classList.add("neg");
+    else el.classList.add("zero");
+  }
+
+  function renderSidebarAccounts(){
+    var list = document.getElementById("account-list");
+    list.innerHTML = "";
+    var total = 0;
+    state.accounts.forEach(function(a){
+      var bal = accountBalance(a.id);
+      total += bal;
+      var row = document.createElement("div");
+      row.className = "account-row";
+      row.innerHTML =
+        '<span class="name"></span>' +
+        '<span style="display:flex;align-items:center;">' +
+          '<span class="bal num ' + (bal < 0 ? "neg":"pos") + '"></span>' +
+          '<button class="del" title="Delete account">&times;</button>' +
+        '</span>';
+      row.querySelector(".name").textContent = a.name;
+      row.querySelector(".bal").textContent = fmt(bal);
+      row.querySelector(".del").addEventListener("click", function(){
+        if(confirm('Delete account "' + a.name + '"? Its transactions will remain but lose an account reference.')){
+          state.accounts = state.accounts.filter(function(x){ return x.id !== a.id; });
+          save(); renderAll();
+        }
+      });
+      list.appendChild(row);
+    });
+    document.getElementById("total-balance").textContent = fmt(total);
+  }
+
+  function renderBudgetView(){
+    var container = document.getElementById("groups-container");
+    container.innerHTML = "";
+    document.getElementById("month-label").textContent = monthLabel(state.selectedMonth);
+
+    var stats = computeCategoryStats(state.selectedMonth);
+
+    if(state.categoryGroups.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No category groups yet. Add one below to start budgeting.";
+      container.appendChild(empty);
+      return;
+    }
+
+    state.categoryGroups.forEach(function(g){
+      var groupEl = document.createElement("div");
+      groupEl.className = "group";
+
+      var header = document.createElement("div");
+      header.className = "group-header";
+      header.innerHTML =
+        '<h3></h3>' +
+        '<span><button class="add-cat">+ add category</button><button class="del-group" title="Delete group">delete group</button></span>';
+      header.querySelector("h3").textContent = g.name;
+      header.querySelector(".add-cat").addEventListener("click", function(){
+        var name = prompt("New category name:");
+        if(name && name.trim()){
+          g.categories.push({ id: uid(), name: name.trim() });
+          save(); renderAll();
+        }
+      });
+      header.querySelector(".del-group").addEventListener("click", function(){
+        if(confirm('Delete group "' + g.name + '" and all its categories? Budgeted amounts and transaction links will remain but be orphaned.')){
+          state.categoryGroups = state.categoryGroups.filter(function(x){ return x.id !== g.id; });
+          save(); renderAll();
+        }
+      });
+      groupEl.appendChild(header);
+
+      var table = document.createElement("table");
+      table.className = "budget-table";
+      var thead = document.createElement("thead");
+      thead.innerHTML = "<tr><th>Category</th><th>Budgeted</th><th>Activity</th><th>Available</th></tr>";
+      table.appendChild(thead);
+
+      var tbody = document.createElement("tbody");
+      var groupBudgeted = 0, groupActivity = 0, groupAvailable = 0;
+
+      if(g.categories.length === 0){
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td colspan="4" style="color:var(--ink-faint); font-size:13.5px;">No categories in this group yet.</td>';
+        tbody.appendChild(tr);
+      }
+
+      g.categories.forEach(function(c){
+        var s = stats[c.id] || { budgeted:0, activity:0, available:0 };
+        groupBudgeted += s.budgeted;
+        groupActivity += s.activity;
+        groupAvailable += s.available;
+
+        var tr = document.createElement("tr");
+
+        var tdName = document.createElement("td");
+        var nameWrap = document.createElement("div");
+        nameWrap.className = "cat-name-cell";
+        var nameSpan = document.createElement("span");
+        nameSpan.textContent = c.name;
+        var delBtn = document.createElement("button");
+        delBtn.className = "del-cat";
+        delBtn.title = "Delete category";
+        delBtn.textContent = "\u00d7";
+        delBtn.addEventListener("click", function(){
+          if(confirm('Delete category "' + c.name + '"?')){
+            g.categories = g.categories.filter(function(x){ return x.id !== c.id; });
+            save(); renderAll();
+          }
+        });
+        nameWrap.appendChild(nameSpan);
+        nameWrap.appendChild(delBtn);
+        tdName.appendChild(nameWrap);
+
+        var tdBudget = document.createElement("td");
+        var input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.className = "budget-input num";
+        input.value = s.budgeted ? s.budgeted.toFixed(2) : "";
+        input.placeholder = "0.00";
+        input.addEventListener("change", function(){
+          var val = parseFloat(input.value);
+          if(isNaN(val)) val = 0;
+          if(!state.budgets[state.selectedMonth]) state.budgets[state.selectedMonth] = {};
+          state.budgets[state.selectedMonth][c.id] = val;
+          save(); renderAll();
+        });
+        tdBudget.appendChild(input);
+
+        var tdActivity = document.createElement("td");
+        tdActivity.className = "num";
+        tdActivity.textContent = fmt(s.activity);
+        tdActivity.style.color = s.activity < -0.004 ? "var(--ink)" : s.activity > 0.004 ? "var(--positive)" : "var(--ink-faint)";
+
+        var tdAvail = document.createElement("td");
+        var availSpan = document.createElement("span");
+        availSpan.className = "avail num " + (s.available > 0.004 ? "pos" : s.available < -0.004 ? "neg" : "zero");
+        availSpan.textContent = fmt(s.available);
+        tdAvail.appendChild(availSpan);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdBudget);
+        tr.appendChild(tdActivity);
+        tr.appendChild(tdAvail);
+        tbody.appendChild(tr);
+      });
+
+      // Group totals row
+      var totalRow = document.createElement("tr");
+      totalRow.className = "group-footer-row";
+      totalRow.innerHTML =
+        '<td>Group total</td>' +
+        '<td class="num"></td>' +
+        '<td class="num"></td>' +
+        '<td class="num"></td>';
+      totalRow.children[1].textContent = fmt(groupBudgeted);
+      totalRow.children[2].textContent = fmt(groupActivity);
+      totalRow.children[3].textContent = fmt(groupAvailable);
+      tbody.appendChild(totalRow);
+
+      table.appendChild(tbody);
+      groupEl.appendChild(table);
+      container.appendChild(groupEl);
+    });
+  }
+
+  // Fill a category <select>. includeIncome adds the Income option; placeholder adds a blank
+  // "choose" option; keepOrphan keeps a deleted category visible so existing rows still display.
+  function populateCategorySelect(sel, includeIncome, placeholder, currentValue, keepOrphan){
+    sel.innerHTML = "";
+    if(placeholder){
+      var ph = document.createElement("option");
+      ph.value = ""; ph.textContent = placeholder;
+      sel.appendChild(ph);
+    }
+    if(includeIncome){
+      var inc = document.createElement("option");
+      inc.value = INCOME_CAT_ID;
+      inc.textContent = "Income (Ready to Assign)";
+      sel.appendChild(inc);
+    }
+    var found = (includeIncome && currentValue === INCOME_CAT_ID);
+    state.categoryGroups.forEach(function(g){
+      var og = document.createElement("optgroup");
+      og.label = g.name;
+      g.categories.forEach(function(c){
+        var opt = document.createElement("option");
+        opt.value = c.id; opt.textContent = c.name;
+        if(c.id === currentValue) found = true;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    if(keepOrphan && currentValue && !found){
+      var orphan = document.createElement("option");
+      orphan.value = currentValue; orphan.textContent = "(deleted category)";
+      sel.appendChild(orphan);
+      found = true;
+    }
+    if(found) sel.value = currentValue;
+    else sel.selectedIndex = 0;
+  }
+
+  function formIsCredit(){
+    var checked = document.querySelector('input[name="tx-type"]:checked');
+    return !!checked && checked.value === "credit";
+  }
+
+  // Debit: pick a spending category (no silent default). Credit: defaults to Income, or a category for refunds.
+  function refreshFormCategories(){
+    var catSel = document.getElementById("tx-category");
+    var credit = formIsCredit();
+    populateCategorySelect(catSel, credit, credit ? null : "Choose category…", catSel.value, false);
+  }
+
+  function renderTransactionsView(){
+    // populate account select (keeping whatever is currently chosen)
+    var accSel = document.getElementById("tx-account");
+    var prevAcc = accSel.value;
+    accSel.innerHTML = "";
+    state.accounts.forEach(function(a){
+      var opt = document.createElement("option");
+      opt.value = a.id; opt.textContent = a.name;
+      accSel.appendChild(opt);
+    });
+    if(prevAcc && state.accounts.some(function(a){ return a.id === prevAcc; })) accSel.value = prevAcc;
+
+    refreshFormCategories();
+
+    // render table
+    var container = document.getElementById("tx-table-container");
+    container.innerHTML = "";
+
+    if(state.transactions.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No transactions yet. Add your first one above.";
+      container.appendChild(empty);
+      return;
+    }
+
+    var sorted = state.transactions.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    var catMap = {};
+    allCategories().forEach(function(c){ catMap[c.id] = c.name; });
+    catMap[INCOME_CAT_ID] = "Income";
+    var accMap = {};
+    state.accounts.forEach(function(a){ accMap[a.id] = a.name; });
+
+    var table = document.createElement("table");
+    table.className = "tx-table";
+    table.innerHTML = "<thead><tr>" +
+      "<th>Date</th><th>Payee</th><th>Type</th><th>Category</th><th>Account</th>" +
+      "<th class='num-col'>Amount</th><th>Cleared</th><th></th>" +
+      "</tr></thead>";
+    var tbody = document.createElement("tbody");
+
+    sorted.forEach(function(t){
+      var tr = document.createElement("tr");
+
+      var tdDate = document.createElement("td");
+      tdDate.textContent = t.date;
+
+      var tdPayee = document.createElement("td");
+      tdPayee.textContent = t.payee;
+
+      // Debit/Credit: flipping it flips the sign, which updates balances and Activity.
+      var tdType = document.createElement("td");
+      var typeSel = document.createElement("select");
+      typeSel.className = "row-select";
+      typeSel.setAttribute("aria-label", "Debit or credit");
+      [["debit", "Debit −"], ["credit", "Credit +"]].forEach(function(pair){
+        var o = document.createElement("option");
+        o.value = pair[0]; o.textContent = pair[1];
+        typeSel.appendChild(o);
+      });
+      typeSel.value = t.amount >= 0 ? "credit" : "debit";
+      typeSel.addEventListener("change", function(){
+        t.amount = (typeSel.value === "credit" ? 1 : -1) * Math.abs(t.amount);
+        save(); renderAll();
+      });
+      tdType.appendChild(typeSel);
+
+      // Category can be corrected after the fact.
+      var tdCat = document.createElement("td");
+      var rowCat = document.createElement("select");
+      rowCat.className = "row-select";
+      rowCat.setAttribute("aria-label", "Category");
+      populateCategorySelect(rowCat, true, null, t.categoryId, true);
+      rowCat.addEventListener("change", function(){
+        t.categoryId = rowCat.value;
+        save(); renderAll();
+      });
+      tdCat.appendChild(rowCat);
+
+      var tdAcc = document.createElement("td");
+      tdAcc.textContent = accMap[t.accountId] || "(deleted account)";
+
+      var tdAmt = document.createElement("td");
+      tdAmt.className = "num num-col " + (t.amount >= 0 ? "amt-pos" : "amt-neg");
+      tdAmt.textContent = (t.amount > 0 ? "+" : "") + fmt(t.amount);
+
+      var tdCleared = document.createElement("td");
+      var chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.className = "cleared-check";
+      chk.checked = !!t.cleared;
+      chk.addEventListener("change", function(){
+        t.cleared = chk.checked;
+        save();
+      });
+      tdCleared.appendChild(chk);
+
+      var tdDel = document.createElement("td");
+      var delBtn = document.createElement("button");
+      delBtn.className = "tx-del";
+      delBtn.textContent = "delete";
+      delBtn.addEventListener("click", function(){
+        if(confirm("Delete this transaction?")){
+          state.transactions = state.transactions.filter(function(x){ return x.id !== t.id; });
+          save(); renderAll();
+        }
+      });
+      tdDel.appendChild(delBtn);
+
+      tr.appendChild(tdDate);
+      tr.appendChild(tdPayee);
+      tr.appendChild(tdType);
+      tr.appendChild(tdCat);
+      tr.appendChild(tdAcc);
+      tr.appendChild(tdAmt);
+      tr.appendChild(tdCleared);
+      tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    var scroller = document.createElement("div");
+    scroller.className = "tx-scroll";
+    scroller.appendChild(table);
+    container.appendChild(scroller);
+  }
+
+  // ---------- Event wiring ----------
+
+  document.querySelectorAll(".nav button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".nav button").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentView = btn.dataset.view;
+      document.getElementById("view-budget").style.display = currentView === "budget" ? "" : "none";
+      document.getElementById("view-transactions").style.display = currentView === "transactions" ? "" : "none";
+      renderAll();
+    });
+  });
+
+  document.getElementById("prev-month").addEventListener("click", function(){
+    state.selectedMonth = addMonths(state.selectedMonth, -1);
+    save(); renderAll();
+  });
+  document.getElementById("next-month").addEventListener("click", function(){
+    state.selectedMonth = addMonths(state.selectedMonth, 1);
+    save(); renderAll();
+  });
+
+  document.getElementById("add-account-btn").addEventListener("click", function(){
+    var name = prompt("Account name (e.g. Checking, Credit Card):");
+    if(!name || !name.trim()) return;
+    var startingStr = prompt("Starting balance for this account (e.g. 250.00 or -80.00):", "0.00");
+    var starting = parseFloat(startingStr);
+    if(isNaN(starting)) starting = 0;
+    state.accounts.push({ id: uid(), name: name.trim(), startingBalance: starting });
+    save(); renderAll();
+  });
+
+  document.getElementById("add-group-btn").addEventListener("click", function(){
+    var name = prompt("New category group name:");
+    if(name && name.trim()){
+      state.categoryGroups.push({ id: uid(), name: name.trim(), categories: [] });
+      save(); renderAll();
+    }
+  });
+
+  document.getElementById("tx-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var date = document.getElementById("tx-date").value;
+    var payee = document.getElementById("tx-payee").value.trim();
+    var accountId = document.getElementById("tx-account").value;
+    var categoryId = document.getElementById("tx-category").value;
+    var amount = parseFloat(document.getElementById("tx-amount").value);
+    var cleared = document.getElementById("tx-cleared").checked;
+
+    if(!date || !payee || !accountId || !categoryId || isNaN(amount) || amount === 0){
+      showToast("Please fill in every field");
+      return;
+    }
+
+    // The amount is typed as a positive number; Debit subtracts, Credit adds.
+    var signed = formIsCredit() ? Math.abs(amount) : -Math.abs(amount);
+
+    state.transactions.push({
+      id: uid(), date: date, payee: payee, accountId: accountId,
+      categoryId: categoryId, amount: signed, cleared: cleared
+    });
+    save();
+    e.target.reset();
+    document.getElementById("tx-date").value = todayStr();
+    document.getElementById("tx-cleared").checked = false;
+    renderAll();
+
+    var txMonth = date.slice(0,7);
+    if(txMonth !== state.selectedMonth){
+      showToast("Added to " + monthLabel(txMonth) + " — switch months on the Budget page to see it");
+    } else {
+      showToast("Transaction added");
+    }
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="tx-type"]'), function(r){
+    r.addEventListener("change", refreshFormCategories);
+  });
+
+  document.getElementById("export-btn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var today = todayStr();
+    a.href = url;
+    a.download = "zephs-budget-" + today + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Exported. Save this file to Drive or OneDrive.");
+  });
+
+  document.getElementById("import-btn").addEventListener("click", function(){
+    document.getElementById("import-file").click();
+  });
+
+  document.getElementById("import-file").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        var parsed = JSON.parse(evt.target.result);
+        if(!parsed.accounts || !parsed.categoryGroups || !parsed.transactions){
+          throw new Error("File doesn't look like a Zeph's Budget export");
+        }
+        if(!confirm("Import this file? It will replace all data currently in this browser.")) return;
+        state = parsed;
+        if(!state.selectedMonth) state.selectedMonth = monthKey(new Date());
+        if(!state.budgets) state.budgets = {};
+        save();
+        renderAll();
+        showToast("Data imported");
+      }catch(err){
+        console.error(err);
+        showToast("Could not import — file isn't a valid Zeph's Budget export");
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", function(){
+    if(confirm("Clear all data in this browser? This cannot be undone — export first if you want a backup.")){
+      state = defaultData();
+      save();
+      renderAll();
+      showToast("Data cleared");
+    }
+  });
+
+  // ---------- Init ----------
+  document.getElementById("tx-date").value = todayStr();
+  renderAll();
+
+  // Register service worker for offline use (only works when served over http/https, not file://)
+  if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(err){
+        console.warn("Service worker registration failed:", err);
+      });
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
